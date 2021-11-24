@@ -36,10 +36,10 @@ const (
 )
 
 var (
-	blueColor   = color.New(color.FgBlue, color.Italic).SprintFunc()
-	cyanColor   = color.New(color.FgCyan).SprintFunc()
-	yellowColor = color.New(color.FgGreen, color.Italic).SprintFunc()
-	pad         = strings.Repeat(" ", 2)
+	blueColor  = color.New(color.FgBlue, color.Italic).SprintFunc()
+	cyanColor  = color.New(color.FgCyan).SprintFunc()
+	greenColor = color.New(color.FgGreen, color.Italic).SprintFunc()
+	pad        = strings.Repeat(" ", 2)
 )
 
 func loadEnvInt(k string, n int) int {
@@ -121,7 +121,7 @@ func (d *Date) year() (string, float64) {
 }
 
 func (c *Clock) Who() string {
-	return line(yellowColor("Hi " + loadEnvStr(envWho, defaultWho)))
+	return line(greenColor("Hi " + loadEnvStr(envWho, defaultWho)))
 }
 
 func (c *Clock) Life() string {
