@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/progress"
 	"github.com/charmbracelet/bubbletea"
+	"github.com/dustin/go-humanize"
 	"github.com/fatih/color"
 	"github.com/nleeper/goment"
 )
@@ -19,14 +20,15 @@ type Clock struct {
 }
 
 const (
-	envAge        = "CLOCK_AGE"
-	envExpected   = "CLOCK_EXPECTED"
+	envBirthday   = "CLOCK_BIRTHDAY"
+	envPassAway   = "CLOCK_PASS_AWAY"
 	envStartColor = "CLOCK_START_COLOR"
 	envEndColor   = "CLOCK_END_COLOR"
 	envWho        = "CLOCK_WHO"
 
-	defaultAge        = 25
-	defaultExpected   = 90
+	timeLayout        = "2006-01-02"
+	defaultBirthday   = "1996-04-12"
+	defaultPassAway   = "2086-04-12"
 	defaultStartColor = "#F3C8ED"
 	defaultEndColor   = "#B2F6EF"
 	defaultWho        = "Coder"
@@ -42,20 +44,22 @@ var (
 	pad        = strings.Repeat(" ", 2)
 )
 
-func loadEnvInt(k string, n int) int {
-	i, err := strconv.Atoi(os.Getenv(k))
-	if err != nil {
-		return n
-	}
-	return i
-}
-
-func loadEnvStr(k string, c string) string {
+func loadEnvStr(k, a string) string {
 	s := os.Getenv(k)
 	if s == "" {
-		return c
+		return a
 	}
 	return s
+}
+
+func loadEnvDate(k, a string) time.Time {
+	s := os.Getenv(k)
+	t, err := time.Parse(timeLayout, s)
+	if err != nil {
+		t, _ = time.Parse(timeLayout, a)
+		return t
+	}
+	return t
 }
 
 func line(text ...string) string {
@@ -69,12 +73,13 @@ func line(text ...string) string {
 }
 
 func New() *Clock {
-	d, _ := goment.New()
+	g, _ := goment.New()
 	return &Clock{
 		date: &Date{
-			date:     d,
-			age:      loadEnvInt(envAge, defaultAge),
-			excepted: loadEnvInt(envExpected, defaultExpected)},
+			date:     g,
+			birthday: loadEnvDate(envBirthday, defaultBirthday),
+			passAway: loadEnvDate(envPassAway, defaultPassAway),
+		},
 		progress: progress.NewModel(progress.WithScaledGradient(
 			loadEnvStr(envStartColor, defaultStartColor),
 			loadEnvStr(envEndColor, defaultEndColor)),
@@ -84,40 +89,50 @@ func New() *Clock {
 
 type Date struct {
 	date     *goment.Goment
-	age      int
-	excepted int
+	birthday time.Time
+	passAway time.Time
 }
 
 func (d *Date) life() (string, float64) {
-	n := d.excepted - d.age
-	return fmt.Sprintf("你的 %s 还剩下大约 %s 年", cyanColor("人生"), cyanItalic(n)), float64(n) / float64(d.excepted)
+	now := time.Now()
+	y := d.passAway.Year() - now.Year()
+	m := humanize.Comma((now.Unix() - d.birthday.Unix()) / 3600)
+	s := humanize.Comma(d.passAway.Unix() - now.Unix())
+	percent := float64(d.passAway.Unix()-now.Unix()) / float64(d.passAway.Unix())
+	return fmt.Sprintf("你的 %s 还剩下大约 %s 年 已经走过 %s 分钟 距离终点还有 %s 秒", cyanColor("人生"), cyanItalic(y), cyanItalic(m), cyanItalic(s)), percent
 }
 
 func (d *Date) day() (string, float64) {
-	h := d.date.Hour()
+	now := time.Now()
+	h := now.Hour()
 	if h > 0 {
 		h--
 	}
-	m := d.date.Minute()
+	m := now.Minute()
 	escaped := float64(h*60 + m)
-	return fmt.Sprintf("%s 还剩下 %s 小时 %s 分钟", cyanColor("今天"), cyanItalic(23-d.date.Hour()), cyanItalic(59-m)), (1440 - escaped) / 1440
+	s := 59 - (time.Now().Unix() % 60)
+	percent := (1440 - escaped) / 1440
+	return fmt.Sprintf("%s 还剩下 %s 小时 %s 分钟 %s 秒", cyanColor("今天"), cyanItalic(23-d.date.Hour()), cyanItalic(59-m), cyanItalic(s)), percent
 }
 
 func (d *Date) week() (string, float64) {
 	w := d.date.Weekday()
 	n := 7 - w
-	return fmt.Sprintf("%s 还剩下 %s 天", cyanColor("这周"), cyanItalic(n)), float64(n) / 7
+	percent := float64(n) / 7
+	return fmt.Sprintf("%s 还剩下 %s 天", cyanColor("这周"), cyanItalic(n)), percent
 }
 
 func (d *Date) month() (string, float64) {
 	m := d.date.Date()
 	days := d.date.DaysInMonth()
-	return fmt.Sprintf("%s 还余下 %s 天", cyanColor("本月"), cyanItalic(days-m)), float64(days-m) / float64(days)
+	percent := float64(days-m) / float64(days)
+	return fmt.Sprintf("%s 还余下 %s 天", cyanColor("本月"), cyanItalic(days-m)), percent
 }
 
 func (d *Date) year() (string, float64) {
 	m := d.date.Month()
-	return fmt.Sprintf("%s 年还余下 %s 个月", cyanItalic(d.date.Year()), cyanItalic(12-m)), float64(12-m) / 12
+	percent := float64(12-m) / 12
+	return fmt.Sprintf("%s 年还余下 %s 个月", cyanItalic(d.date.Year()), cyanItalic(12-m)), percent
 }
 
 func (c *Clock) Who() string {
@@ -149,7 +164,11 @@ func (c *Clock) Year() string {
 	return line(s, c.progress.ViewAs(p))
 }
 
-func (c *Clock) Init() tea.Cmd { return nil }
+func (c *Clock) Sigh() string {
+	return line("来都来了 给个面子 都不容易 大过年的 习惯就好")
+}
+
+func (c *Clock) Init() tea.Cmd { return tickCmd() }
 func (c *Clock) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -163,12 +182,18 @@ func (c *Clock) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return c, nil
 
 	default:
-		return c, nil
+		return c, tickCmd()
 	}
 }
 
 func (c *Clock) View() string {
-	return "\n" + c.Who() + c.Life() + c.Day() + c.Week() + c.Month() + c.Year()
+	return "\n" + c.Who() + c.Life() + c.Day() + c.Week() + c.Month() + c.Year() + c.Sigh()
+}
+
+func tickCmd() tea.Cmd {
+	return tea.Tick(time.Second, func(t time.Time) tea.Msg {
+		return t
+	})
 }
 
 func main() {
