@@ -9,4 +9,5 @@ require (
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fatih/color v1.13.0
 	github.com/nleeper/goment v1.4.2
+	github.com/spf13/viper v1.9.0
 )

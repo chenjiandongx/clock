@@ -8,10 +8,11 @@ import (
 	"time"
 
 	"github.com/charmbracelet/bubbles/progress"
-	"github.com/charmbracelet/bubbletea"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/dustin/go-humanize"
 	"github.com/fatih/color"
 	"github.com/nleeper/goment"
+	"github.com/spf13/viper"
 )
 
 type Clock struct {
@@ -47,7 +48,10 @@ var (
 func loadEnvStr(k, a string) string {
 	s := os.Getenv(k)
 	if s == "" {
-		return a
+		s = viper.GetString(k)
+		if s == "" {
+			return a
+		}
 	}
 	return s
 }
@@ -56,8 +60,11 @@ func loadEnvDate(k, a string) time.Time {
 	s := os.Getenv(k)
 	t, err := time.Parse(timeLayout, s)
 	if err != nil {
-		t, _ = time.Parse(timeLayout, a)
-		return t
+		s = viper.GetString(k)
+		t, err = time.Parse(timeLayout, s)
+		if err != nil {
+			t, _ = time.Parse(timeLayout, a)
+		}
 	}
 	return t
 }
@@ -197,6 +204,19 @@ func tickCmd() tea.Cmd {
 }
 
 func main() {
+	viper.SetConfigName(".life_clock") // name of config file (without extension)
+	viper.SetConfigType("yaml")        // REQUIRED if the config file does not have the extension in the name
+	viper.AddConfigPath(".")
+	viper.AddConfigPath("$HOME")
+	viper.AddConfigPath("/etc")
+	if err := viper.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			// Config file not found; ignore error if desired
+		} else {
+			// Config file was found but another error was produced
+			panic(fmt.Errorf("fatal error config file: %w ", err))
+		}
+	}
 	if err := tea.NewProgram(New()).Start(); err != nil {
 		fmt.Println("Oh shit!", err)
 		os.Exit(1)
