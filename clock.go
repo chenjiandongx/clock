@@ -98,7 +98,7 @@ func (d *Date) life() (string, float64) {
 	y := d.passAway.Year() - now.Year()
 	m := humanize.Comma((now.Unix() - d.birthday.Unix()) / 3600)
 	s := humanize.Comma(d.passAway.Unix() - now.Unix())
-	percent := float64(d.passAway.Unix()-now.Unix()) / float64(d.passAway.Unix())
+	percent := float64(d.passAway.Unix()-now.Unix()) / float64(d.passAway.Unix()-d.birthday.Unix())
 	return fmt.Sprintf("你的 %s 还剩下大约 %s 年 已经走过 %s 分钟 距离终点还有 %s 秒", cyanColor("人生"), cyanItalic(y), cyanItalic(m), cyanItalic(s)), percent
 }
 

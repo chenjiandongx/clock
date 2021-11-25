@@ -24,7 +24,7 @@ clock 默认会读取下列的环境变量
 
 ### 🤔 人生阿！
 
-![image](https://user-images.githubusercontent.com/19553554/143385381-e04dad38-8b9b-40c6-8bb0-05aa941a0f63.jpg)
+![image](https://user-images.githubusercontent.com/19553554/143389082-c135142f-d493-41a8-8774-529b9554dabf.png)
 
 ### 🔖 License
 
