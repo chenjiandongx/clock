@@ -47,11 +47,13 @@ var (
 
 func loadEnvStr(k, a string) string {
 	s := os.Getenv(k)
+	if s != "" {
+		return s
+	}
+
+	s = viper.GetString(k)
 	if s == "" {
-		s = viper.GetString(k)
-		if s == "" {
-			return a
-		}
+		return a
 	}
 	return s
 }
@@ -59,12 +61,13 @@ func loadEnvStr(k, a string) string {
 func loadEnvDate(k, a string) time.Time {
 	s := os.Getenv(k)
 	t, err := time.Parse(timeLayout, s)
+	if err == nil {
+		return t
+	}
+
+	t, err = time.Parse(timeLayout, viper.GetString(k))
 	if err != nil {
-		s = viper.GetString(k)
-		t, err = time.Parse(timeLayout, s)
-		if err != nil {
-			t, _ = time.Parse(timeLayout, a)
-		}
+		t, _ = time.Parse(timeLayout, a)
 	}
 	return t
 }
@@ -103,10 +106,20 @@ type Date struct {
 func (d *Date) life() (string, float64) {
 	now := time.Now()
 	y := d.passAway.Year() - now.Year()
-	m := humanize.Comma((now.Unix() - d.birthday.Unix()) / 3600)
+	m := humanize.Comma((now.Unix() - d.birthday.Unix()) / 60)
 	s := humanize.Comma(d.passAway.Unix() - now.Unix())
 	percent := float64(d.passAway.Unix()-now.Unix()) / float64(d.passAway.Unix()-d.birthday.Unix())
-	return fmt.Sprintf("你的 %s 还剩下大约 %s 年 已经走过 %s 分钟 距离终点还有 %s 秒", cyanColor("人生"), cyanItalic(y), cyanItalic(m), cyanItalic(s)), percent
+	return fmt.Sprintf("你的 %s 还剩下 %s 年 已经走过 %s 分钟 距离终点还有 %s 秒", cyanColor("人生"), cyanItalic(y), cyanItalic(m), cyanItalic(s)), percent
+}
+
+func (d *Date) work() (string, float64) {
+	oh := d.birthday.AddDate(35, 0, 0).Unix()
+	n := oh - time.Now().Unix()
+	m := n / 60
+	s := n - m*60
+
+	percent := float64(n) / float64(oh-d.birthday.Unix())
+	return fmt.Sprintf("%s 距离你 %s 岁生日还有 %s 分钟 %s 秒", cyanColor("别紧张"), cyanItalic(35), cyanItalic(humanize.Comma(m)), cyanItalic(s)), percent
 }
 
 func (d *Date) day() (string, float64) {
@@ -117,7 +130,7 @@ func (d *Date) day() (string, float64) {
 	}
 	m := now.Minute()
 	escaped := float64(h*60 + m)
-	s := 59 - (time.Now().Unix() % 60)
+	s := 60 - (time.Now().Unix() % 60)
 	percent := (1440 - escaped) / 1440
 	return fmt.Sprintf("%s 还剩下 %s 小时 %s 分钟 %s 秒", cyanColor("今天"), cyanItalic(23-d.date.Hour()), cyanItalic(59-m), cyanItalic(s)), percent
 }
@@ -139,7 +152,7 @@ func (d *Date) month() (string, float64) {
 func (d *Date) year() (string, float64) {
 	m := d.date.Month()
 	percent := float64(12-m) / 12
-	return fmt.Sprintf("%s 年还余下 %s 个月", cyanItalic(d.date.Year()), cyanItalic(12-m)), percent
+	return fmt.Sprintf("%s 年还余下 %s 个月 过去的 %s 个月你的 KPI 达标了吗", cyanItalic(d.date.Year()), cyanItalic(12-m), cyanItalic(m)), percent
 }
 
 func (c *Clock) Who() string {
@@ -148,6 +161,11 @@ func (c *Clock) Who() string {
 
 func (c *Clock) Life() string {
 	s, p := c.date.life()
+	return line(s, c.progress.ViewAs(p))
+}
+
+func (c *Clock) Work() string {
+	s, p := c.date.work()
 	return line(s, c.progress.ViewAs(p))
 }
 
@@ -172,7 +190,7 @@ func (c *Clock) Year() string {
 }
 
 func (c *Clock) Sigh() string {
-	return line("来都来了 给个面子 都不容易 大过年的 习惯就好")
+	return line("来都来了 给个面子 就这样吧 都不容易 是个孩子 大过年的 都是朋友 习惯就好")
 }
 
 func (c *Clock) Init() tea.Cmd { return tickCmd() }
@@ -194,7 +212,7 @@ func (c *Clock) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (c *Clock) View() string {
-	return "\n" + c.Who() + c.Life() + c.Day() + c.Week() + c.Month() + c.Year() + c.Sigh()
+	return "\n" + c.Who() + c.Life() + c.Work() + c.Day() + c.Week() + c.Month() + c.Year() + c.Sigh()
 }
 
 func tickCmd() tea.Cmd {
@@ -204,19 +222,13 @@ func tickCmd() tea.Cmd {
 }
 
 func main() {
-	viper.SetConfigName(".life_clock") // name of config file (without extension)
-	viper.SetConfigType("yaml")        // REQUIRED if the config file does not have the extension in the name
+	viper.SetConfigName(".life_clock")
+	viper.SetConfigType("yaml")
 	viper.AddConfigPath(".")
 	viper.AddConfigPath("$HOME")
 	viper.AddConfigPath("/etc")
-	if err := viper.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-			// Config file not found; ignore error if desired
-		} else {
-			// Config file was found but another error was produced
-			panic(fmt.Errorf("fatal error config file: %w ", err))
-		}
-	}
+	_ = viper.ReadInConfig()
+
 	if err := tea.NewProgram(New()).Start(); err != nil {
 		fmt.Println("Oh shit!", err)
 		os.Exit(1)
