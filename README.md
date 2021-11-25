@@ -22,7 +22,7 @@ clock 默认会优先读取下列的环境变量
 | CLOCK_START_COLOR | 渐变起始颜色 | #F3C8ED |
 | CLOCK_END_COLOR | 渐变终止颜色 | #B2F6EF |
 
-新增 .life_clock 文件，以 yaml 格式配置，读取的优先级如下：
+或者新增 .life_clock 文件，以 yaml 格式配置，读取的优先级如下：
 
 * 0x00: 读取环境变量
 * 0x01: 读取 clock 程序运行路径下的 .life_clock 文件
@@ -44,7 +44,7 @@ CLOCK_END_COLOR: "#B2F6EF"
 
 > 真正的勇士敢于直面赤裸裸的人生以及血淋淋的事实
 
-![image](https://user-images.githubusercontent.com/19553554/143471486-0f9d2ab1-7756-492a-85de-b17ced0f3515.png)
+![image](https://user-images.githubusercontent.com/19553554/143475466-c5629696-6363-404b-964a-3e7aa1027572.png)
 
 ### 👏 Contributors
 
