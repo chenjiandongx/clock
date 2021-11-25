@@ -36,7 +36,7 @@ const (
 )
 
 var (
-	blueColor  = color.New(color.FgBlue, color.Italic).SprintFunc()
+	cyanItalic = color.New(color.FgCyan, color.Italic).SprintFunc()
 	cyanColor  = color.New(color.FgCyan).SprintFunc()
 	greenColor = color.New(color.FgGreen, color.Italic).SprintFunc()
 	pad        = strings.Repeat(" ", 2)
@@ -90,7 +90,7 @@ type Date struct {
 
 func (d *Date) life() (string, float64) {
 	n := d.excepted - d.age
-	return fmt.Sprintf("你的 %s 还剩下大约 %s 年", cyanColor("人生"), blueColor(n)), float64(n) / float64(d.excepted)
+	return fmt.Sprintf("你的 %s 还剩下大约 %s 年", cyanColor("人生"), cyanItalic(n)), float64(n) / float64(d.excepted)
 }
 
 func (d *Date) day() (string, float64) {
@@ -100,24 +100,24 @@ func (d *Date) day() (string, float64) {
 	}
 	m := d.date.Minute()
 	escaped := float64(h*60 + m)
-	return fmt.Sprintf("%s 还剩下 %s 小时 %s 分钟", cyanColor("今天"), blueColor(23-d.date.Hour()), blueColor(59-m)), (1440 - escaped) / 1440
+	return fmt.Sprintf("%s 还剩下 %s 小时 %s 分钟", cyanColor("今天"), cyanItalic(23-d.date.Hour()), cyanItalic(59-m)), (1440 - escaped) / 1440
 }
 
 func (d *Date) week() (string, float64) {
 	w := d.date.Weekday()
 	n := 7 - w
-	return fmt.Sprintf("%s 还剩下 %s 天", cyanColor("这周"), blueColor(n)), float64(n) / 7
+	return fmt.Sprintf("%s 还剩下 %s 天", cyanColor("这周"), cyanItalic(n)), float64(n) / 7
 }
 
 func (d *Date) month() (string, float64) {
 	m := d.date.Date()
 	days := d.date.DaysInMonth()
-	return fmt.Sprintf("%s 还余下 %s 天", cyanColor("本月"), blueColor(days-m)), float64(days-m) / float64(days)
+	return fmt.Sprintf("%s 还余下 %s 天", cyanColor("本月"), cyanItalic(days-m)), float64(days-m) / float64(days)
 }
 
 func (d *Date) year() (string, float64) {
 	m := d.date.Month()
-	return fmt.Sprintf("%s 年还余下 %s 个月", blueColor(d.date.Year()), blueColor(12-m)), float64(12-m) / 12
+	return fmt.Sprintf("%s 年还余下 %s 个月", cyanItalic(d.date.Year()), cyanItalic(12-m)), float64(12-m) / 12
 }
 
 func (c *Clock) Who() string {
