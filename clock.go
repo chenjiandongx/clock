@@ -113,13 +113,20 @@ func (d *Date) life() (string, float64) {
 }
 
 func (d *Date) work() (string, float64) {
-	oh := d.birthday.AddDate(35, 0, 0).Unix()
+	if d.birthday.AddDate(35, 0, 0).Unix()-time.Now().Unix() > 0 {
+		return d.warning(35)
+	}
+	return d.warning(40)
+}
+
+func (d *Date) warning(age int) (string, float64) {
+	oh := d.birthday.AddDate(age, 0, 0).Unix()
 	n := oh - time.Now().Unix()
 	m := n / 60
 	s := n - m*60
 
 	percent := float64(n) / float64(oh-d.birthday.Unix())
-	return fmt.Sprintf("%s 距离你 %s 岁生日还有 %s 分钟 %s 秒", cyanColor("别紧张"), cyanItalic(35), cyanItalic(humanize.Comma(m)), cyanItalic(s)), percent
+	return fmt.Sprintf("%s 距离你 %s 岁生日还有 %s 分钟 %s 秒", cyanColor("别紧张"), cyanItalic(age), cyanItalic(humanize.Comma(m)), cyanItalic(s)), percent
 }
 
 func (d *Date) day() (string, float64) {

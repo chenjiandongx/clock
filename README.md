@@ -12,7 +12,7 @@ go get -u github.com/chenjiandongx/clock
 
 ### 🔑 配置读取
 
-clock 默认会优先读取下列的环境变量
+clock 默认会优先读取下列的环境变量，日期的时间格式为 `yyyy-mm-dd`
 
 | Key | Desc | Default |
 | --- | ---- | ------- |
@@ -36,7 +36,7 @@ clock 默认会优先读取下列的环境变量
 CLOCK_WHO: "Coder"
 CLOCK_BIRTHDAY: "1996-04-12"
 CLOCK_PASS_AWAY: "2086-04-12"
-CLOCK_START_COLOR: "#F3C8ED" 
+CLOCK_START_COLOR: "#F3C8ED"
 CLOCK_END_COLOR: "#B2F6EF" 
 ```
 
