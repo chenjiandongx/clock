@@ -44,7 +44,7 @@ CLOCK_END_COLOR: "#B2F6EF"
 
 > 真正的勇士敢于直面赤裸裸的人生以及血淋淋的事实
 
-https://user-images.githubusercontent.com/19553554/143688126-b03290db-7da3-491d-b04f-84fb85bf3679.mov
+https://user-images.githubusercontent.com/19553554/143688238-46f0f8c7-3204-448f-9384-b6205d17e93d.mov
 
 ### 👏 Contributors
 
