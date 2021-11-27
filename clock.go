@@ -3,22 +3,21 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"math"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/bubbles/progress"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/dustin/go-humanize"
 	"github.com/fatih/color"
+	"github.com/fogleman/ease"
+	"github.com/lucasb-eyer/go-colorful"
+	"github.com/muesli/termenv"
 	"github.com/nleeper/goment"
 	"github.com/spf13/viper"
 )
-
-type Clock struct {
-	date     *Date
-	progress progress.Model
-}
 
 const (
 	envBirthday   = "CLOCK_BIRTHDAY"
@@ -34,7 +33,9 @@ const (
 	defaultEndColor   = "#B2F6EF"
 	defaultWho        = "Coder"
 
-	padding  = 2
+	progressFullChar  = "█"
+	progressEmptyChar = "░"
+
 	maxWidth = 80
 )
 
@@ -43,6 +44,11 @@ var (
 	cyanColor  = color.New(color.FgCyan).SprintFunc()
 	greenColor = color.New(color.FgGreen, color.Italic).SprintFunc()
 	pad        = strings.Repeat(" ", 2)
+
+	subtle        = termenv.Style{}.Foreground(term.Color("241")).Styled
+	term          = termenv.ColorProfile()
+	progressEmpty = subtle(progressEmptyChar)
+	ramp          []string
 )
 
 func loadEnvStr(k, a string) string {
@@ -82,6 +88,21 @@ func line(text ...string) string {
 	return buf.String()
 }
 
+type Clock struct {
+	date   *Date
+	frames []int
+	loads  []bool
+}
+
+const (
+	ProgLife = iota
+	ProgWork
+	ProgDay
+	ProgWeek
+	ProgMonth
+	ProgYear
+)
+
 func New() *Clock {
 	g, _ := goment.New()
 	return &Clock{
@@ -90,10 +111,8 @@ func New() *Clock {
 			birthday: loadEnvDate(envBirthday, defaultBirthday),
 			passAway: loadEnvDate(envPassAway, defaultPassAway),
 		},
-		progress: progress.NewModel(progress.WithScaledGradient(
-			loadEnvStr(envStartColor, defaultStartColor),
-			loadEnvStr(envEndColor, defaultEndColor)),
-		),
+		frames: make([]int, 6),
+		loads:  make([]bool, 6),
 	}
 }
 
@@ -166,52 +185,58 @@ func (c *Clock) Who() string {
 	return line(greenColor("Hi " + loadEnvStr(envWho, defaultWho)))
 }
 
-func (c *Clock) Life() string {
-	s, p := c.date.life()
-	return line(s, c.progress.ViewAs(p))
-}
-
-func (c *Clock) Work() string {
-	s, p := c.date.work()
-	return line(s, c.progress.ViewAs(p))
-}
-
-func (c *Clock) Day() string {
-	s, p := c.date.day()
-	return line(s, c.progress.ViewAs(p))
-}
-
-func (c *Clock) Week() string {
-	s, p := c.date.week()
-	return line(s, c.progress.ViewAs(p))
-}
-
-func (c *Clock) Month() string {
-	s, p := c.date.month()
-	return line(s, c.progress.ViewAs(p))
-}
-
-func (c *Clock) Year() string {
-	s, p := c.date.year()
-	return line(s, c.progress.ViewAs(p))
-}
-
 func (c *Clock) Sigh() string {
 	return line("来都来了 给个面子 就这样吧 都不容易 是个孩子 大过年的 都是朋友 习惯就好")
 }
 
+func (c *Clock) render(s string, p float64, index int, f func(float64) float64) string {
+	if !c.loads[index] {
+		c.frames[index]++
+		val := f(float64(c.frames[index]) / float64(100))
+		if val >= p {
+			val = p
+			c.loads[index] = true
+		}
+		return line(s, c.progressbar(val))
+	}
+	return line(s, c.progressbar(p))
+}
+
+func (c *Clock) Life() string {
+	s, p := c.date.life()
+	return c.render(s, p, ProgLife, ease.InOutQuad)
+}
+
+func (c *Clock) Work() string {
+	s, p := c.date.work()
+	return c.render(s, p, ProgWork, ease.InOutCubic)
+}
+
+func (c *Clock) Day() string {
+	s, p := c.date.day()
+	return c.render(s, p, ProgDay, ease.InOutQuart)
+}
+
+func (c *Clock) Week() string {
+	s, p := c.date.week()
+	return c.render(s, p, ProgWeek, ease.InOutSine)
+}
+
+func (c *Clock) Month() string {
+	s, p := c.date.month()
+	return c.render(s, p, ProgMonth, ease.InOutCirc)
+}
+
+func (c *Clock) Year() string {
+	s, p := c.date.year()
+	return c.render(s, p, ProgYear, ease.InOutBounce)
+}
+
 func (c *Clock) Init() tea.Cmd { return tickCmd() }
 func (c *Clock) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
+	switch msg.(type) {
 	case tea.KeyMsg:
 		return c, tea.Quit
-
-	case tea.WindowSizeMsg:
-		c.progress.Width = msg.Width - padding*2 - 4
-		if c.progress.Width > maxWidth {
-			c.progress.Width = maxWidth
-		}
-		return c, nil
 
 	default:
 		return c, tickCmd()
@@ -222,10 +247,50 @@ func (c *Clock) View() string {
 	return "\n" + c.Who() + c.Life() + c.Work() + c.Day() + c.Week() + c.Month() + c.Year() + c.Sigh()
 }
 
+func (c *Clock) progressbar(percent float64) string {
+	w := float64(maxWidth)
+
+	fullSize := int(math.Round(w * percent))
+	var fullCells string
+	for i := 0; i < fullSize; i++ {
+		fullCells += termenv.String(progressFullChar).Foreground(term.Color(ramp[i])).String()
+	}
+
+	emptySize := int(w) - fullSize
+	emptyCells := strings.Repeat(progressEmpty, emptySize)
+
+	return fmt.Sprintf("%s%s %3.0f%%", fullCells, emptyCells, math.Round(percent*100))
+}
+
+type tickMsg struct{}
+
 func tickCmd() tea.Cmd {
-	return tea.Tick(time.Second, func(t time.Time) tea.Msg {
-		return t
+	return tea.Tick(time.Second/15, func(t time.Time) tea.Msg {
+		return tickMsg{}
 	})
+}
+
+func makeRamp(colorA, colorB string, steps float64) (s []string) {
+	cA, _ := colorful.Hex(colorA)
+	cB, _ := colorful.Hex(colorB)
+
+	for i := 0.0; i < steps; i++ {
+		c := cA.BlendLuv(cB, i/steps)
+		s = append(s, colorToHex(c))
+	}
+	return
+}
+
+func colorToHex(c colorful.Color) string {
+	return fmt.Sprintf("#%s%s%s", colorFloatToHex(c.R), colorFloatToHex(c.G), colorFloatToHex(c.B))
+}
+
+func colorFloatToHex(f float64) (s string) {
+	s = strconv.FormatInt(int64(f*255), 16)
+	if len(s) == 1 {
+		s = "0" + s
+	}
+	return
 }
 
 func main() {
@@ -235,6 +300,10 @@ func main() {
 	viper.AddConfigPath("$HOME")
 	viper.AddConfigPath("/etc")
 	_ = viper.ReadInConfig()
+
+	startColor := loadEnvStr(envStartColor, defaultStartColor)
+	endColor := loadEnvStr(envEndColor, defaultEndColor)
+	ramp = makeRamp(startColor, endColor, maxWidth)
 
 	if err := tea.NewProgram(New()).Start(); err != nil {
 		fmt.Println("Oh shit!", err)
