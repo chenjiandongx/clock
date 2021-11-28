@@ -45,10 +45,11 @@ var (
 	greenColor = color.New(color.FgGreen, color.Italic).SprintFunc()
 	pad        = strings.Repeat(" ", 2)
 
-	subtle        = termenv.Style{}.Foreground(term.Color("241")).Styled
 	term          = termenv.ColorProfile()
-	progressEmpty = subtle(progressEmptyChar)
+	progressEmpty = termenv.Style{}.Foreground(term.Color("241")).Styled(progressEmptyChar)
 	ramp          []string
+	speedup       int
+	ch            = make(chan struct{}, 1)
 )
 
 func loadEnvStr(k, a string) string {
@@ -88,6 +89,10 @@ func line(text ...string) string {
 	return buf.String()
 }
 
+func getSpeedup() int {
+	return speedup + (speedup/2+speedup+int(math.Log2(float64(speedup))))*speedup
+}
+
 type Clock struct {
 	date   *Date
 	frames []int
@@ -103,11 +108,20 @@ const (
 	ProgYear
 )
 
+var globalNow = &goment.Goment{}
+
+func updateGlobalNow() {
+	globalNow, _ = goment.New()
+	globalNow.Add(time.Hour * time.Duration(getSpeedup()))
+}
+
+func Now() *goment.Goment {
+	return globalNow
+}
+
 func New() *Clock {
-	g, _ := goment.New()
 	return &Clock{
 		date: &Date{
-			date:     g,
 			birthday: loadEnvDate(envBirthday, defaultBirthday),
 			passAway: loadEnvDate(envPassAway, defaultPassAway),
 		},
@@ -117,30 +131,32 @@ func New() *Clock {
 }
 
 type Date struct {
-	date     *goment.Goment
 	birthday time.Time
 	passAway time.Time
 }
 
 func (d *Date) life() (string, float64) {
-	now := time.Now()
+	now := Now()
 	y := d.passAway.Year() - now.Year()
-	m := humanize.Comma((now.Unix() - d.birthday.Unix()) / 3600)
-	s := humanize.Comma(d.passAway.Unix() - now.Unix())
-	percent := float64(d.passAway.Unix()-now.Unix()) / float64(d.passAway.Unix()-d.birthday.Unix())
+	m := humanize.Comma((now.ToUnix() - d.birthday.Unix()) / 3600)
+	s := humanize.Comma(d.passAway.Unix() - now.ToUnix())
+	percent := float64(d.passAway.Unix()-now.ToUnix()) / float64(d.passAway.Unix()-d.birthday.Unix())
 	return fmt.Sprintf("你的 %s 还剩下 %s 年 已经走过 %s 小时 距离终点还有 %s 秒", cyanColor("人生"), cyanItalic(y), cyanItalic(m), cyanItalic(s)), percent
 }
 
 func (d *Date) work() (string, float64) {
-	if d.birthday.AddDate(35, 0, 0).Unix()-time.Now().Unix() > 0 {
-		return d.warning(35)
+	blessings := 35
+	for {
+		if d.birthday.AddDate(blessings, 0, 0).Unix()-Now().ToUnix() > 0 {
+			return d.warning(blessings)
+		}
+		blessings += 5
 	}
-	return d.warning(40)
 }
 
 func (d *Date) warning(age int) (string, float64) {
 	oh := d.birthday.AddDate(age, 0, 0).Unix()
-	n := oh - time.Now().Unix()
+	n := oh - Now().ToUnix()
 	m := n / 60
 	s := n - m*60
 
@@ -149,44 +165,62 @@ func (d *Date) warning(age int) (string, float64) {
 }
 
 func (d *Date) day() (string, float64) {
-	now := time.Now()
+	now := Now()
 	h := now.Hour()
 	if h > 0 {
 		h--
 	}
 	m := now.Minute()
 	escaped := float64(h*60 + m)
-	s := 60 - (time.Now().Unix() % 60)
+	s := 60 - (Now().ToUnix() % 60)
 	percent := (1440 - escaped) / 1440
-	return fmt.Sprintf("%s 还剩下 %s 小时 %s 分钟 %s 秒", cyanColor("今天"), cyanItalic(23-d.date.Hour()), cyanItalic(59-m), cyanItalic(s)), percent
+	return fmt.Sprintf("%s 还剩下 %s 小时 %s 分钟 %s 秒", cyanColor("今天"), cyanItalic(23-now.Hour()), cyanItalic(59-m), cyanItalic(s)), percent
 }
 
 func (d *Date) week() (string, float64) {
-	w := d.date.Weekday()
+	w := Now().Weekday()
 	n := 7 - w
 	percent := float64(n) / 7
 	return fmt.Sprintf("%s 还剩下 %s 天", cyanColor("这周"), cyanItalic(n)), percent
 }
 
 func (d *Date) month() (string, float64) {
-	m := d.date.Date()
-	days := d.date.DaysInMonth()
+	m := Now().Date()
+	days := Now().DaysInMonth()
 	percent := float64(days-m) / float64(days)
 	return fmt.Sprintf("%s 还余下 %s 天", cyanColor("本月"), cyanItalic(days-m)), percent
 }
 
 func (d *Date) year() (string, float64) {
-	m := d.date.Month()
+	m := Now().Month()
 	percent := float64(12-m) / 12
-	return fmt.Sprintf("%s 年还余下 %s 个月 过去的 %s 个月你的 KPI 达标了吗", cyanItalic(d.date.Year()), cyanItalic(12-m), cyanItalic(m)), percent
+	return fmt.Sprintf("%s 年还余下 %s 个月", cyanItalic(Now().Year()), cyanItalic(12-m)), percent
 }
 
 func (c *Clock) Who() string {
-	return line(greenColor("Hi " + loadEnvStr(envWho, defaultWho)))
+	return line(fmt.Sprintf("%s 现在是 %s", greenColor("Hi "+loadEnvStr(envWho, defaultWho)), cyanItalic(Now().Format("YYYY-MM-DD HH:mm:ss"))))
 }
 
 func (c *Clock) Sigh() string {
 	return line("来都来了 给个面子 就这样吧 都不容易 是个孩子 大过年的 都是朋友 习惯就好")
+}
+
+func (c *Clock) Stop() string {
+	return line("你已经走完了生命的全部旅程 你无法超越时间", "珍惜当下吧 这个世界没有什么好畏惧的 反正我们只来一次")
+}
+
+func (c *Clock) Help() string {
+	text := "长按 <s> 为生命加速；按 <q> 退出"
+	return line(termenv.Style{}.Foreground(term.Color("241")).Styled(text))
+}
+
+func (c *Clock) Loaded() bool {
+	for _, b := range c.loads {
+		if !b {
+			return false
+		}
+	}
+	return true
 }
 
 func (c *Clock) render(s string, p float64, index int, f func(float64) float64) string {
@@ -232,19 +266,31 @@ func (c *Clock) Year() string {
 	return c.render(s, p, ProgYear, ease.InOutBounce)
 }
 
-func (c *Clock) Init() tea.Cmd { return tickCmd() }
+func (c *Clock) Init() tea.Cmd { return tickFastCmd() }
 func (c *Clock) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg.(type) {
+	switch m := msg.(type) {
 	case tea.KeyMsg:
-		return c, tea.Quit
-
-	default:
-		return c, tickCmd()
+		switch m.String() {
+		case "q", "Q":
+			return c, tea.Quit
+		case "s", "S":
+			speedup++
+			updateGlobalNow()
+		}
 	}
+
+	if c.Loaded() {
+		return c, tickSlowCmd()
+	}
+	return c, tickFastCmd()
 }
 
 func (c *Clock) View() string {
-	return "\n" + c.Who() + c.Life() + c.Work() + c.Day() + c.Week() + c.Month() + c.Year() + c.Sigh()
+	if Now().ToUnix() >= c.date.passAway.Unix() {
+		globalNow, _ = goment.New(c.date.passAway)
+		return "\n" + c.Who() + c.Stop() + c.Help()
+	}
+	return "\n" + c.Who() + c.Life() + c.Work() + c.Day() + c.Week() + c.Month() + c.Year() + c.Sigh() + c.Help()
 }
 
 func (c *Clock) progressbar(percent float64) string {
@@ -262,11 +308,19 @@ func (c *Clock) progressbar(percent float64) string {
 	return fmt.Sprintf("%s%s %3.0f%%", fullCells, emptyCells, math.Round(percent*100))
 }
 
-type tickMsg struct{}
+type tickFastMsg struct{}
 
-func tickCmd() tea.Cmd {
+func tickFastCmd() tea.Cmd {
 	return tea.Tick(time.Second/15, func(t time.Time) tea.Msg {
-		return tickMsg{}
+		return tickFastMsg{}
+	})
+}
+
+type tickSlowMsg struct{}
+
+func tickSlowCmd() tea.Cmd {
+	return tea.Tick(time.Second, func(t time.Time) tea.Msg {
+		return tickSlowMsg{}
 	})
 }
 
@@ -301,9 +355,26 @@ func main() {
 	viper.AddConfigPath("/etc")
 	_ = viper.ReadInConfig()
 
+	defer func() {
+		ch <- struct{}{}
+	}()
+
+	ticker := time.Tick(time.Second)
+	go func() {
+		for {
+			select {
+			case <-ticker:
+				updateGlobalNow()
+			case <-ch:
+				return
+			}
+		}
+	}()
+
 	startColor := loadEnvStr(envStartColor, defaultStartColor)
 	endColor := loadEnvStr(envEndColor, defaultEndColor)
 	ramp = makeRamp(startColor, endColor, maxWidth)
+	updateGlobalNow()
 
 	if err := tea.NewProgram(New()).Start(); err != nil {
 		fmt.Println("Oh shit!", err)
