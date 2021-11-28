@@ -2,6 +2,8 @@
 
 ***人生短短数十载 来都来了 凑活着过吧***
 
+![image](https://user-images.githubusercontent.com/19553554/143769534-21a7d9d7-b1b5-494e-b046-9240f943b848.png)
+
 ### 🔰 安装
 
 使用 `go get` 或者直接下载预编译二进制文件 [clock/releases](https://github.com/chenjiandongx/clock/releases)
@@ -33,6 +35,7 @@ clock 默认会优先读取下列的环境变量，日期的时间格式为 `yyy
 
 ```yaml
 # .life_clock file
+
 CLOCK_WHO: "Coder"
 CLOCK_BIRTHDAY: "1996-04-12"
 CLOCK_PASS_AWAY: "2086-04-12"
@@ -42,9 +45,11 @@ CLOCK_END_COLOR: "#B2F6EF"
 
 ### 🤔 人生阿！
 
-> 真正的勇士敢于直面赤裸裸的人生以及血淋淋的事实
+> 真正的勇士敢于直面赤裸裸的人生和血淋淋的事实 -- dongdong
 
-https://user-images.githubusercontent.com/19553554/143688238-46f0f8c7-3204-448f-9384-b6205d17e93d.mov
+***短短这一生***
+
+https://user-images.githubusercontent.com/19553554/143770322-01bbb073-4fc7-414d-bae6-01131cebb387.mov
 
 ### 👏 Contributors
 
