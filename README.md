@@ -6,6 +6,8 @@
 
 ***须知少时凌云志 曾许人间第一流***
 
+项目灵感来自 [utools](https://u.tools/) 插件 [人生进度条](https://yuanliao.info/d/617-0018)
+
 ![image](https://user-images.githubusercontent.com/19553554/143896547-c3bed94e-bccd-4624-9c98-580fb8517a5e.png)
 
 ### 🔰 安装
