@@ -2,7 +2,7 @@
 
 ***人生短短数十载 来都来了 凑活着过吧***
 
-![image](https://user-images.githubusercontent.com/19553554/143769534-21a7d9d7-b1b5-494e-b046-9240f943b848.png)
+![image](https://user-images.githubusercontent.com/19553554/143896547-c3bed94e-bccd-4624-9c98-580fb8517a5e.png)
 
 ### 🔰 安装
 
