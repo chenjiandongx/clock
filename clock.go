@@ -210,7 +210,7 @@ func (c *Clock) Stop() string {
 }
 
 func (c *Clock) Help() string {
-	text := "长按 <s> 为生命加速；按 <q> 退出"
+	text := "长按 <s> 为生命加速；按 <p> 回到当下；按 <q> 退出"
 	return line(termenv.Style{}.Foreground(term.Color("241")).Styled(text))
 }
 
@@ -273,6 +273,9 @@ func (c *Clock) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch m.String() {
 		case "q", "Q":
 			return c, tea.Quit
+		case "p", "P":
+			speedup = 0
+			updateGlobalNow()
 		case "s", "S":
 			speedup++
 			updateGlobalNow()
