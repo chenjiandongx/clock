@@ -1,6 +1,10 @@
 # Clock
 
-***人生短短数十载 来都来了 凑活着过吧***
+[![GoDoc](https://godoc.org/github.com/chenjiandongx/clock?status.svg)](https://godoc.org/github.com/chenjiandongx/clock)
+[![Go Report Card](https://goreportcard.com/badge/github.com/chenjiandongx/clock)](https://goreportcard.com/report/github.com/chenjiandongx/clock)
+[![License](https://img.shields.io/badge/License-MIT-brightgreen.svg)](https://opensource.org/licenses/MIT)
+
+***须知少时凌云志 曾许人间第一流***
 
 ![image](https://user-images.githubusercontent.com/19553554/143896547-c3bed94e-bccd-4624-9c98-580fb8517a5e.png)
 
